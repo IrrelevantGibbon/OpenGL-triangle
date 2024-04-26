@@ -2,6 +2,7 @@ package main
 
 import "core:c"
 import fmt "core:fmt"
+import "vendor:ENet"
 import gl "vendor:OpenGL"
 import glfw "vendor:glfw"
 
@@ -46,6 +47,41 @@ main :: proc() {
 	gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
 
 
+	vertices := [9]f32{-0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.0, 0.5, 0.0}
+
+	vbo: u32
+
+	gl.GenBuffers(1, &vbo)
+	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
+	gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices), &vertices, gl.STATIC_DRAW)
+	defer gl.DeleteBuffers(1, &vbo)
+
+	vertexShader: u32
+	shader: cstring = "#version 330 core\n layout (location = 0) in vec3 aPos;\nvoid main()\n{\n gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n}"
+
+	vertexShader = gl.CreateShader(gl.VERTEX_SHADER)
+	defer gl.DeleteShader(vertexShader)
+
+	gl.ShaderSource(vertexShader, 1, &shader, nil)
+	gl.CompileShader(vertexShader)
+
+	if (!IsShaderCompiled(vertexShader)) {
+		return
+	}
+
+	fragmentShader: u32
+	fragment: cstring = "#version 330 core\n out vec4 FragColor;\n\nvoid main()\n{\n FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n}"
+
+	fragmentShader = gl.CreateShader(gl.FRAGMENT_SHADER)
+	defer gl.DeleteShader(fragmentShader)
+
+	gl.ShaderSource(fragmentShader, 1, &fragment, nil)
+	gl.CompileShader(fragmentShader)
+
+	if (!IsShaderCompiled(fragmentShader)) {
+		return
+	}
+
 	for (!glfw.WindowShouldClose(window)) {
 		glfw.PollEvents()
 		Draw()
@@ -74,4 +110,17 @@ SetContext :: proc() {
 	glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR, GLFW_MINOR_VERSION)
 	glfw.WindowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 	glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, OPENGL_FORWARD_COMPAT)
+}
+
+IsShaderCompiled :: proc(shaderIndex: u32) -> bool {
+	success: i32
+	log := make([]u8, 512)
+	defer delete(log)
+	gl.GetShaderiv(shaderIndex, gl.COMPILE_STATUS, &success)
+	if !b32(success) {
+		gl.GetShaderInfoLog(shaderIndex, 512, nil, raw_data(log))
+		fmt.printf("Error: Shader vertex compilation failed %s\n", log)
+		return false
+	}
+	return true
 }
