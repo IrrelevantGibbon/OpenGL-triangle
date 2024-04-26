@@ -35,15 +35,10 @@ main :: proc() {
 		return
 	}
 	glfw.MakeContextCurrent(window)
-
 	glfw.SwapInterval(1)
-
 	glfw.SetKeyCallback(window, KeyCallback)
-
 	glfw.SetFramebufferSizeCallback(window, SizeCallback)
-
 	gl.load_up_to(int(GL_MAJOR_VERSION), GL_MINOR_VERSION, glfw.gl_set_proc_address)
-
 	gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
 
 
@@ -65,7 +60,7 @@ main :: proc() {
 	gl.ShaderSource(vertexShader, 1, &shader, nil)
 	gl.CompileShader(vertexShader)
 
-	if (!IsShaderCompiled(vertexShader)) {
+	if (!IsShaderCompiled(vertexShader, gl.COMPILE_STATUS)) {
 		return
 	}
 
@@ -78,7 +73,19 @@ main :: proc() {
 	gl.ShaderSource(fragmentShader, 1, &fragment, nil)
 	gl.CompileShader(fragmentShader)
 
-	if (!IsShaderCompiled(fragmentShader)) {
+	if (!IsShaderCompiled(fragmentShader, gl.COMPILE_STATUS)) {
+		return
+	}
+
+	shaderProgramn: u32
+	shaderProgramn = gl.CreateProgram()
+	defer gl.DeleteProgram(shaderProgramn)
+
+	gl.AttachShader(shaderProgramn, vertexShader)
+	gl.AttachShader(shaderProgramn, fragmentShader)
+	gl.LinkProgram(shaderProgramn)
+
+	if (!IsShaderCompiled(shaderProgramn, gl.LINK_STATUS)) {
 		return
 	}
 
@@ -112,11 +119,11 @@ SetContext :: proc() {
 	glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, OPENGL_FORWARD_COMPAT)
 }
 
-IsShaderCompiled :: proc(shaderIndex: u32) -> bool {
+IsShaderCompiled :: proc(shaderIndex: u32, flag: u32) -> bool {
 	success: i32
 	log := make([]u8, 512)
 	defer delete(log)
-	gl.GetShaderiv(shaderIndex, gl.COMPILE_STATUS, &success)
+	gl.GetShaderiv(shaderIndex, flag, &success)
 	if !b32(success) {
 		gl.GetShaderInfoLog(shaderIndex, 512, nil, raw_data(log))
 		fmt.printf("Error: Shader vertex compilation failed %s\n", log)
