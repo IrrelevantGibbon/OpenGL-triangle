@@ -41,16 +41,6 @@ main :: proc() {
 	gl.load_up_to(int(GL_MAJOR_VERSION), GL_MINOR_VERSION, glfw.gl_set_proc_address)
 	gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
 
-
-	vertices := [9]f32{-0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.0, 0.5, 0.0}
-
-	vbo: u32
-
-	gl.GenBuffers(1, &vbo)
-	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices), &vertices, gl.STATIC_DRAW)
-	defer gl.DeleteBuffers(1, &vbo)
-
 	vertexShader: u32
 	shader: cstring = "#version 330 core\n layout (location = 0) in vec3 aPos;\nvoid main()\n{\n gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n}"
 
@@ -60,7 +50,7 @@ main :: proc() {
 	gl.ShaderSource(vertexShader, 1, &shader, nil)
 	gl.CompileShader(vertexShader)
 
-	if (!IsShaderCompiled(vertexShader, gl.COMPILE_STATUS)) {
+	if (!IsShaderCompiled(vertexShader)) {
 		return
 	}
 
@@ -73,25 +63,46 @@ main :: proc() {
 	gl.ShaderSource(fragmentShader, 1, &fragment, nil)
 	gl.CompileShader(fragmentShader)
 
-	if (!IsShaderCompiled(fragmentShader, gl.COMPILE_STATUS)) {
+	if (!IsShaderCompiled(fragmentShader)) {
 		return
 	}
 
-	shaderProgramn: u32
-	shaderProgramn = gl.CreateProgram()
-	defer gl.DeleteProgram(shaderProgramn)
+	shaderProgram: u32
+	shaderProgram = gl.CreateProgram()
+	defer gl.DeleteProgram(shaderProgram)
 
-	gl.AttachShader(shaderProgramn, vertexShader)
-	gl.AttachShader(shaderProgramn, fragmentShader)
-	gl.LinkProgram(shaderProgramn)
+	gl.AttachShader(shaderProgram, vertexShader)
+	gl.AttachShader(shaderProgram, fragmentShader)
+	gl.LinkProgram(shaderProgram)
 
-	if (!IsShaderCompiled(shaderProgramn, gl.LINK_STATUS)) {
+	if (!IsProgramLinked(shaderProgram)) {
 		return
 	}
+
+	gl.DeleteShader(vertexShader)
+	gl.DeleteShader(fragmentShader)
+
+	vertices := [9]f32{-0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.0, 0.5, 0.0}
+
+	vao: u32
+	vbo: u32
+
+	gl.GenVertexArrays(1, &vao)
+	gl.BindVertexArray(vao)
+	gl.GenBuffers(1, &vbo)
+	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
+	gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices), &vertices, gl.STATIC_DRAW)
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * size_of(f32), uintptr(0))
+	gl.EnableVertexAttribArray(0)
+
 
 	for (!glfw.WindowShouldClose(window)) {
 		glfw.PollEvents()
 		Draw()
+
+		gl.UseProgram(shaderProgram)
+		gl.BindVertexArray(vao)
+		gl.DrawArrays(gl.TRIANGLES, 0, 3)
 		glfw.SwapBuffers((window))
 	}
 
@@ -119,14 +130,29 @@ SetContext :: proc() {
 	glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, OPENGL_FORWARD_COMPAT)
 }
 
-IsShaderCompiled :: proc(shaderIndex: u32, flag: u32) -> bool {
+IsShaderCompiled :: proc(shaderIndex: u32) -> bool {
 	success: i32
 	log := make([]u8, 512)
 	defer delete(log)
-	gl.GetShaderiv(shaderIndex, flag, &success)
+	gl.GetShaderiv(shaderIndex, gl.COMPILE_STATUS, &success)
+
 	if !b32(success) {
 		gl.GetShaderInfoLog(shaderIndex, 512, nil, raw_data(log))
 		fmt.printf("Error: Shader vertex compilation failed %s\n", log)
+		return false
+	}
+	return true
+}
+
+IsProgramLinked :: proc(programIndex: u32) -> bool {
+	success: i32
+	log := make([]u8, 512)
+	defer delete(log)
+	gl.GetProgramiv(programIndex, gl.LINK_STATUS, &success)
+
+	if !b32(success) {
+		gl.GetShaderInfoLog(programIndex, 512, nil, raw_data(log))
+		fmt.printf("Error: Program linking failed %s\n", log)
 		return false
 	}
 	return true
