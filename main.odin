@@ -42,7 +42,7 @@ main :: proc() {
 	gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
 
 	vertexShader: u32
-	shader: cstring = "#version 330 core\n layout (location = 0) in vec3 aPos;\nvoid main()\n{\n gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n}"
+	shader: cstring = "#version 330 core\nlayout (location = 0) in vec3 aPos;\nlayout (location = 1) in vec3 aColor;\nout vec3 ourColor;\nvoid main()\n{\n gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\nourColor = aColor;\n\n}"
 
 	vertexShader = gl.CreateShader(gl.VERTEX_SHADER)
 	defer gl.DeleteShader(vertexShader)
@@ -55,7 +55,7 @@ main :: proc() {
 	}
 
 	fragmentShader: u32
-	fragment: cstring = "#version 330 core\n out vec4 FragColor;\n\nvoid main()\n{\n FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n}"
+	fragment: cstring = "#version 330 core\n out vec4 FragColor;\nin vec3 ourColor;\nvoid main()\n{\n FragColor = vec4(ourColor, 1.0);\n}"
 
 	fragmentShader = gl.CreateShader(gl.FRAGMENT_SHADER)
 	defer gl.DeleteShader(fragmentShader)
@@ -82,7 +82,26 @@ main :: proc() {
 	gl.DeleteShader(vertexShader)
 	gl.DeleteShader(fragmentShader)
 
-	vertices := [9]f32{-0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.0, 0.5, 0.0}
+	vertices := [18]f32 {
+		0.5,
+		-0.5,
+		0.0,
+		1.0,
+		0.0,
+		0.0,
+		-0.5,
+		-0.5,
+		0.0,
+		0.0,
+		1.0,
+		0.0,
+		0.0,
+		0.5,
+		0.0,
+		0.0,
+		0.0,
+		1.0,
+	}
 
 	vao: u32
 	vbo: u32
@@ -92,14 +111,18 @@ main :: proc() {
 	gl.GenBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 	gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices), &vertices, gl.STATIC_DRAW)
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * size_of(f32), uintptr(0))
+
+
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 6 * size_of(f32), uintptr(0))
 	gl.EnableVertexAttribArray(0)
+
+	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 6 * size_of(f32), uintptr(3 * size_of(f32)))
+	gl.EnableVertexAttribArray(1)
 
 
 	for (!glfw.WindowShouldClose(window)) {
 		glfw.PollEvents()
 		Draw()
-
 		gl.UseProgram(shaderProgram)
 		gl.BindVertexArray(vao)
 		gl.DrawArrays(gl.TRIANGLES, 0, 3)
