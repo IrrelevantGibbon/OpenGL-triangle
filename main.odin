@@ -119,6 +119,8 @@ main :: proc() {
 	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 6 * size_of(f32), uintptr(3 * size_of(f32)))
 	gl.EnableVertexAttribArray(1)
 
+	defer gl.DeleteBuffers(1, &vao)
+	defer gl.DeleteBuffers(1, &vbo)
 
 	for (!glfw.WindowShouldClose(window)) {
 		glfw.PollEvents()
