@@ -2,11 +2,10 @@ package main
 
 import "core:c"
 import fmt "core:fmt"
-import "vendor:ENet"
 import gl "vendor:OpenGL"
 import glfw "vendor:glfw"
 
-WINDOW_NAME :: "Minecraft"
+WINDOW_NAME :: "Hello World"
 WINDOW_WIDTH :: 800
 WINDOW_HEIGHT :: 600
 
